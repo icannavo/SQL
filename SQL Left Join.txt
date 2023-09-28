@@ -1,0 +1,11 @@
+
+SELECT
+    Orders.OrderID,
+    Customers.CustomerName,
+    OrderDetails.ProductName
+FROM
+    Orders
+LEFT JOIN
+    Customers ON Orders.CustomerID = Customers.CustomerID
+LEFT JOIN
+    OrderDetails ON Orders.OrderID = OrderDetails.OrderID;
