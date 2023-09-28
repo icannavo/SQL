@@ -1,0 +1,67 @@
+USE [JoaoComex]
+GO
+/****** Object:  Trigger [dbo].[ProcessoInsertTrigger]    Script Date: 28/09/2023 10:44:50 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+  ALTER TRIGGER[dbo].[ProcessoInsertTrigger]
+                    ON[dbo].[Processo]
+                    AFTER INSERT
+                    AS
+                        BEGIN
+
+                    SET NOCOUNT ON;
+
+                    DECLARE @idEmpresaProcesso int;
+                    DECLARE @processoId int;
+                    DECLARE @chaveFILIAL varchar;
+                    DECLARE @numeroUpdate varchar;
+                    DECLARE @SequenciaUtilizada int;
+                    DECLARE @SequenciaChaveProcesso int;
+                    DECLARE @QuantidadeSequenciaChave int;
+                    DECLARE @OrigemExportacao int;
+
+                    SELECT @idEmpresaProcesso = fi.EmpresaId,
+                        @processoId = a.PROCESSOID,
+                        @chaveFILIAL = FI.CHAVE,
+                        @numeroUpdate = A.NUMERO,
+                        @SequenciaUtilizada = a.SequenciaUtilizada,
+                        @SequenciaChaveProcesso = emp.SequenciaChaveProcesso,
+                        @QuantidadeSequenciaChave = emp.QuantidadeSequenciaChave,
+                        @OrigemExportacao = i.ExpoOrigemId
+
+                    FROM Processo a
+                        JOIN inserted i ON a.ProcessoId = i.ProcessoId
+
+                    AND a.UtilizaPrefixo = 1
+
+                    AND i.Numero IS NULL
+                        JOIN Filial fi ON fi.FilialId = i.FilialId
+
+                    JOIN Empresa emp ON emp.EmpresaId = fi.EmpresaId;
+
+                    IF @OrigemExportacao is null
+
+                    Begin
+                        UPDATE a SET a.Chave = ISNULL(fi.Chave, '') + ISNULL(a.PrefixoFilial, '') + cast(RIGHT('0000000000' + CONVERT(NVARCHAR, emp.SequenciaChaveProcesso), emp.QuantidadeSequenciaChave) AS varchar),
+                    a.Numero = ISNULL(a.PrefixoFilial, '') + cast(RIGHT('0000000000' + CONVERT(NVARCHAR, emp.SequenciaChaveProcesso), emp.QuantidadeSequenciaChave) AS varchar),
+                    a.SequenciaUtilizada = cast(RIGHT('0000000000' + CONVERT(NVARCHAR, emp.SequenciaChaveProcesso), emp.QuantidadeSequenciaChave) AS varchar)
+
+                    FROM Processo a
+                        JOIN inserted i ON a.ProcessoId = i.ProcessoId
+
+                    AND a.UtilizaPrefixo = 1
+
+                    AND i.Numero IS NULL
+                        JOIN Filial fi ON fi.FilialId = i.FilialId
+
+                    JOIN Empresa emp ON emp.EmpresaId = @idEmpresaProcesso;
+
+                    UPDATE empresa
+
+                    SET SequenciaChaveProcesso = SequenciaChaveProcesso + 1
+
+                    WHERE EmpresaId = @idEmpresaProcesso;
+                    End
+                END
