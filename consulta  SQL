@@ -1,0 +1,4 @@
+
+SELECT *
+FROM Produtos
+WHERE Preco > 50;
